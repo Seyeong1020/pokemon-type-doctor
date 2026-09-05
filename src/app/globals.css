@@ -1,3 +1,4 @@
+@import url("https://fonts.googleapis.com/css2?family=Gugi&family=IBM+Plex+Sans+KR:wght@500;700;800;900&display=swap");
 @import "tailwindcss";
 
 :root {
@@ -13,6 +14,8 @@
   --muted: #6a6a60;
   --red: #ba3f55;
   --blue-button: #3f477a;
+  --font-body: "IBM Plex Sans KR", "Pretendard", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --font-display: "Gugi", "Galmuri11", "DungGeunMo", "NeoDunggeunmo Pro", var(--font-body);
 }
 
 * {
@@ -30,7 +33,7 @@ body {
     var(--body);
   background-size: 54px 54px, 18px 18px, 18px 18px;
   color: var(--line);
-  font-family: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  font-family: var(--font-body);
 }
 
 button {
@@ -81,7 +84,9 @@ button {
 }
 
 .brand strong {
+  font-family: var(--font-display);
   font-size: 18px;
+  font-weight: 400;
 }
 
 .brand small,
@@ -103,6 +108,7 @@ button {
   border: 3px solid var(--line);
   box-shadow: 4px 5px 0 var(--line);
   cursor: pointer;
+  font-family: var(--font-body);
   font-weight: 900;
 }
 
@@ -133,14 +139,15 @@ button {
 }
 
 .gameboy::before {
-  content: "POWER";
+  content: "전원";
   position: absolute;
   left: 24px;
   top: 18px;
   color: #5a504a;
+  font-family: var(--font-body);
   font-size: 10px;
   font-weight: 950;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   z-index: 0;
 }
 
@@ -211,6 +218,7 @@ button {
 
 .tiny-label {
   margin: 0 0 10px;
+  font-family: var(--font-body);
   font-size: 13px;
   font-weight: 900;
   color: var(--screen-dark);
@@ -224,21 +232,23 @@ p {
 
 h1 {
   margin-bottom: 14px;
+  font-family: var(--font-display);
   font-size: clamp(42px, 8vw, 78px);
-  font-weight: 950;
+  font-weight: 400;
   line-height: 0.98;
 }
 
 h2 {
   margin-bottom: 12px;
+  font-family: var(--font-display);
   font-size: clamp(22px, 3.4vw, 34px);
-  font-weight: 950;
+  font-weight: 400;
 }
 
 .lead {
   max-width: 540px;
   font-size: 18px;
-  font-weight: 800;
+  font-weight: 700;
   line-height: 1.55;
 }
 
@@ -343,6 +353,7 @@ h2 {
   display: flex;
   width: 100%;
   justify-content: space-between;
+  font-family: var(--font-body);
   font-weight: 900;
 }
 
@@ -357,6 +368,7 @@ h2 {
 .type-btn {
   border: 3px solid var(--line);
   color: #fff8e5;
+  font-family: var(--font-body);
   font-weight: 900;
   text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.32);
 }
@@ -427,7 +439,9 @@ h2 {
 }
 
 .answer-modal strong {
+  font-family: var(--font-display);
   font-size: 34px;
+  font-weight: 400;
 }
 
 .answer-modal small {
