@@ -1,15 +1,18 @@
 @import "tailwindcss";
 
 :root {
-  --body: #ddd2aa;
-  --case: #b8b0a0;
-  --case-dark: #7b746d;
+  --body: #d8d0b4;
+  --case: #beb8aa;
+  --case-hi: #ded8ca;
+  --case-dark: #7c756c;
   --line: #272727;
   --screen: #a8bf68;
+  --screen-hi: #c1d585;
   --screen-dark: #384528;
   --ink: #17210f;
   --muted: #6a6a60;
   --red: #ba3f55;
+  --blue-button: #3f477a;
 }
 
 * {
@@ -21,10 +24,11 @@ body {
   min-height: 100vh;
   overflow-x: hidden;
   background:
-    linear-gradient(90deg, rgba(39, 39, 39, 0.06) 1px, transparent 1px),
-    linear-gradient(rgba(39, 39, 39, 0.06) 1px, transparent 1px),
+    radial-gradient(circle at 24px 24px, rgba(255, 255, 255, 0.28) 0 2px, transparent 3px),
+    linear-gradient(90deg, rgba(39, 39, 39, 0.055) 1px, transparent 1px),
+    linear-gradient(rgba(39, 39, 39, 0.055) 1px, transparent 1px),
     var(--body);
-  background-size: 18px 18px;
+  background-size: 54px 54px, 18px 18px, 18px 18px;
   color: var(--line);
   font-family: "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
 }
@@ -97,7 +101,7 @@ button {
 .type-btn,
 .answer-modal {
   border: 3px solid var(--line);
-  box-shadow: 6px 6px 0 var(--line);
+  box-shadow: 4px 5px 0 var(--line);
   cursor: pointer;
   font-weight: 900;
 }
@@ -110,22 +114,63 @@ button {
 
 .gameboy {
   border: 5px solid var(--line);
-  border-radius: 8px 8px 28px 8px;
-  background: var(--case);
-  box-shadow: 12px 12px 0 var(--case-dark);
-  padding: clamp(16px, 3vw, 30px);
+  border-radius: 18px 18px 44px 18px;
+  background:
+    linear-gradient(145deg, var(--case-hi), var(--case) 54%, #a8a094),
+    var(--case);
+  box-shadow:
+    inset 5px 5px 0 rgba(255, 255, 255, 0.45),
+    inset -7px -7px 0 rgba(65, 60, 55, 0.22),
+    12px 12px 0 var(--case-dark);
+  padding: clamp(36px, 4vw, 46px) clamp(16px, 3vw, 30px) clamp(22px, 3vw, 34px);
   position: relative;
   overflow: hidden;
 }
 
+.gameboy > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gameboy::before {
+  content: "POWER";
+  position: absolute;
+  left: 24px;
+  top: 18px;
+  color: #5a504a;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  z-index: 0;
+}
+
+.gameboy::after {
+  content: "";
+  position: absolute;
+  right: 22px;
+  bottom: 18px;
+  width: 128px;
+  height: 44px;
+  border-radius: 18px;
+  background: repeating-linear-gradient(105deg, rgba(36, 36, 36, 0.72) 0 5px, transparent 5px 13px);
+  opacity: 0.34;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .lcd {
   border: 5px solid var(--line);
-  border-radius: 6px;
+  border-radius: 12px 12px 26px 12px;
   background:
-    linear-gradient(rgba(255, 255, 255, 0.13), transparent 40%),
+    repeating-linear-gradient(0deg, rgba(23, 33, 15, 0.09) 0 2px, transparent 2px 5px),
+    linear-gradient(140deg, rgba(255, 255, 255, 0.24), transparent 36%),
+    radial-gradient(circle at 80% 15%, var(--screen-hi), transparent 34%),
     var(--screen);
   color: var(--ink);
-  box-shadow: inset 0 0 0 5px rgba(56, 69, 40, 0.25);
+  box-shadow:
+    inset 0 0 0 5px rgba(56, 69, 40, 0.26),
+    inset 8px 8px 0 rgba(255, 255, 255, 0.08),
+    inset -8px -8px 0 rgba(23, 33, 15, 0.12);
 }
 
 .home {
@@ -140,6 +185,22 @@ button {
   gap: 16px;
   min-height: clamp(340px, 52vw, 420px);
   padding: clamp(20px, 5vw, 48px);
+  position: relative;
+}
+
+.home-lcd::before,
+.monster-panel::before,
+.study-head::before,
+.result-lcd::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #b92e3f;
+  box-shadow: 0 0 0 3px rgba(185, 46, 63, 0.18);
 }
 
 .home-lcd img {
@@ -152,6 +213,7 @@ button {
   margin: 0 0 10px;
   font-size: 13px;
   font-weight: 900;
+  color: var(--screen-dark);
 }
 
 h1,
@@ -180,6 +242,13 @@ h2 {
   line-height: 1.55;
 }
 
+.soft-note {
+  margin-top: 14px;
+  color: var(--screen-dark);
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .controls {
   display: flex;
   justify-content: flex-end;
@@ -196,6 +265,16 @@ h2 {
 
 .sub-action {
   min-width: 130px;
+}
+
+.menu-button:active,
+.main-action:active,
+.sub-action:active,
+.count-button:active,
+.type-btn:active,
+.answer-modal:active {
+  transform: translate(2px, 2px);
+  box-shadow: 2px 3px 0 var(--line);
 }
 
 .count-picker {
@@ -247,6 +326,7 @@ h2 {
   place-items: center;
   padding: 18px;
   text-align: center;
+  position: relative;
 }
 
 .monster-panel img {
@@ -290,6 +370,11 @@ h2 {
 
 .quiz-pad {
   align-self: center;
+  border: 3px solid rgba(36, 36, 36, 0.36);
+  border-radius: 18px;
+  background: rgba(238, 231, 197, 0.58);
+  padding: clamp(14px, 2vw, 22px);
+  box-shadow: inset 3px 3px 0 rgba(255, 255, 255, 0.32);
 }
 
 .type-grid {
@@ -333,7 +418,9 @@ h2 {
   width: min(420px, 100%);
   gap: 8px;
   border-radius: 8px;
-  background: #fff8d4;
+  background:
+    repeating-linear-gradient(0deg, rgba(55, 69, 42, 0.06) 0 2px, transparent 2px 5px),
+    #fff8d4;
   padding: 20px;
   text-align: center;
   white-space: normal;
@@ -369,10 +456,12 @@ h2 {
 .result-lcd {
   min-height: 340px;
   padding: clamp(24px, 5vw, 48px);
+  position: relative;
 }
 
 .study-head {
   padding: clamp(20px, 4vw, 36px);
+  position: relative;
 }
 
 .study-head h1 {
@@ -486,7 +575,21 @@ h2 {
     border-width: 3px;
     border-radius: 7px 7px 20px 7px;
     box-shadow: 5px 5px 0 var(--case-dark);
-    padding: 10px;
+    padding: 28px 10px 12px;
+  }
+
+  .gameboy::before {
+    left: 14px;
+    top: 10px;
+    font-size: 9px;
+  }
+
+  .gameboy::after {
+    right: 12px;
+    bottom: 10px;
+    width: 86px;
+    height: 28px;
+    opacity: 0.22;
   }
 
   .lcd {

@@ -84,6 +84,43 @@ function bestTypes(defenders: TypeId[]) {
   return scored.filter((type) => type.score === best);
 }
 
+function resultReview(score: number, total: number) {
+  const ratio = total === 0 ? 0 : score / total;
+
+  if (ratio === 1) {
+    return {
+      title: "당신은 오박사입니다",
+      text: "상성 도감이 머릿속에 들어있네요. 이 정도면 연구소 차려도 됩니다.",
+    };
+  }
+
+  if (ratio >= 0.8) {
+    return {
+      title: "체육관 관장급입니다",
+      text: "실전에서 거의 안 흔들립니다. 몇 타입만 더 다듬으면 박사 라인.",
+    };
+  }
+
+  if (ratio >= 0.6) {
+    return {
+      title: "라이벌전은 할 만합니다",
+      text: "감은 잡혔습니다. 4배 약점만 더 빨리 찾으면 훨씬 좋아져요.",
+    };
+  }
+
+  if (ratio >= 0.4) {
+    return {
+      title: "포켓몬센터부터 들르세요",
+      text: "아직 헷갈리는 타입이 많습니다. 공부 모드에서 공격 타입을 눌러보세요.",
+    };
+  }
+
+  return {
+    title: "당신은 지우가 될 수 없습니다",
+    text: "지금은 안 됩니다. 하지만 한 세트만 더 하면 피카츄도 조금은 믿어줄지도.",
+  };
+}
+
 function attackGroups(attack: TypeId) {
   return types.reduce(
     (groups, defender) => {
@@ -201,6 +238,7 @@ export default function Home() {
   const selectedScore = selected ? multiplier(selected, question.types) : null;
   const isCorrect = !!selected && answers.some((type) => type.id === selected);
   const studyGroups = attackGroups(studyAttack);
+  const review = resultReview(score, quizQuestions.length);
 
   async function startQuiz() {
     setLoading(true);
@@ -350,11 +388,9 @@ export default function Home() {
           <div className="lcd result-lcd">
             <p className="tiny-label">퀴즈 완료</p>
             <h1>{score} / {quizQuestions.length}</h1>
-            <p className="lead">
-              {usedFallback
-                ? "PokeAPI 연결이 안 돼서 기본 샘플로 진행했습니다."
-                : "이번 세트는 중복 없이 랜덤으로 출제했습니다."}
-            </p>
+            <h2>{review.title}</h2>
+            <p className="lead">{review.text}</p>
+            {usedFallback && <p className="soft-note">PokeAPI 연결 실패로 기본 샘플 세트가 사용됐습니다.</p>}
           </div>
           <div className="controls">
             <button className="main-action" onClick={startQuiz} disabled={loading}>
