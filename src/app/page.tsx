@@ -7,6 +7,12 @@ type TypeId =
   | "fighting" | "poison" | "ground" | "flying" | "psychic" | "bug"
   | "rock" | "ghost" | "dragon" | "dark" | "steel" | "fairy";
 
+type PokemonQuestion = {
+  name: string;
+  types: TypeId[];
+  img: string;
+};
+
 const types: { id: TypeId; name: string; color: string }[] = [
   { id: "normal", name: "노말", color: "#918c7f" },
   { id: "fire", name: "불꽃", color: "#d94b2f" },
@@ -49,13 +55,16 @@ const chart: Record<TypeId, Partial<Record<TypeId, number>>> = {
   fairy: { fire: 0.5, fighting: 2, poison: 0.5, dragon: 2, dark: 2, steel: 0.5 },
 };
 
-const questions = [
+const fallbackQuestions: PokemonQuestion[] = [
   { name: "리자몽", types: ["fire", "flying"] as TypeId[], img: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/6.png" },
   { name: "거북왕", types: ["water"] as TypeId[], img: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/9.png" },
   { name: "피카츄", types: ["electric"] as TypeId[], img: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/25.png" },
   { name: "이상해꽃", types: ["grass", "poison"] as TypeId[], img: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/3.png" },
   { name: "팬텀", types: ["ghost", "poison"] as TypeId[], img: "https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/94.png" },
 ];
+
+const questionCountOptions = [5, 10, 15, 20, 30];
+const apiBase = "https://pokeapi.co/api/v2";
 
 function typeName(id: TypeId) {
   return types.find((type) => type.id === id)?.name ?? id;
@@ -75,30 +84,113 @@ function bestTypes(defenders: TypeId[]) {
   return scored.filter((type) => type.score === best);
 }
 
-function randomQuestion(exceptName?: string) {
-  const candidates = exceptName ? questions.filter((question) => question.name !== exceptName) : questions;
-  return candidates[Math.floor(Math.random() * candidates.length)] ?? questions[0];
+function shuffle<T>(items: T[]) {
+  return [...items].sort(() => Math.random() - 0.5);
+}
+
+function isTypeId(value: string): value is TypeId {
+  return types.some((type) => type.id === value);
+}
+
+function idFromUrl(url: string) {
+  return Number(url.split("/").filter(Boolean).at(-1));
+}
+
+async function getJson<T>(url: string): Promise<T> {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error("데이터를 불러오지 못했습니다.");
+  return response.json() as Promise<T>;
+}
+
+async function loadAllSpecies() {
+  type NamedResource = { name: string; url: string };
+  type GenerationList = { results: NamedResource[] };
+  type Generation = { pokemon_species: NamedResource[] };
+
+  const generationList = await getJson<GenerationList>(`${apiBase}/generation?limit=100`);
+  const generations = await Promise.all(
+    generationList.results.map((generation) => getJson<Generation>(generation.url)),
+  );
+  const speciesById = new Map<number, string>();
+
+  for (const generation of generations) {
+    for (const species of generation.pokemon_species) {
+      const id = idFromUrl(species.url);
+      if (Number.isFinite(id)) speciesById.set(id, species.name);
+    }
+  }
+
+  return [...speciesById.entries()].map(([id, name]) => ({ id, name }));
+}
+
+async function loadPokemonQuestion(species: { id: number; name: string }): Promise<PokemonQuestion | null> {
+  type PokemonResponse = {
+    sprites: { front_default: string | null };
+    types: { type: { name: string } }[];
+  };
+  type SpeciesResponse = {
+    names: { name: string; language: { name: string } }[];
+  };
+
+  const [pokemon, speciesDetail] = await Promise.all([
+    getJson<PokemonResponse>(`${apiBase}/pokemon/${species.id}`),
+    getJson<SpeciesResponse>(`${apiBase}/pokemon-species/${species.id}`),
+  ]);
+  const pokemonTypes = pokemon.types.map((slot) => slot.type.name).filter(isTypeId);
+  if (!pokemonTypes.length || !pokemon.sprites.front_default) return null;
+
+  return {
+    name: speciesDetail.names.find((name) => name.language.name === "ko")?.name ?? species.name,
+    types: pokemonTypes,
+    img: pokemon.sprites.front_default,
+  };
+}
+
+async function loadQuizQuestions(count: number) {
+  try {
+    const species = shuffle(await loadAllSpecies()).slice(0, count);
+    const loaded = await Promise.all(species.map(loadPokemonQuestion));
+    const quizQuestions = loaded.filter((question): question is PokemonQuestion => question !== null);
+
+    if (quizQuestions.length > 0) return { questions: quizQuestions, fromApi: true };
+  } catch {
+    // PokeAPI가 막히거나 느릴 때도 퀴즈 자체는 시작되게 둡니다.
+  }
+
+  return {
+    questions: shuffle(fallbackQuestions).slice(0, Math.min(count, fallbackQuestions.length)),
+    fromApi: false,
+  };
 }
 
 export default function Home() {
-  const [mode, setMode] = useState<"home" | "quiz" | "study">("home");
-  const [questionNumber, setQuestionNumber] = useState(1);
-  const [question, setQuestion] = useState(() => randomQuestion());
+  const [mode, setMode] = useState<"home" | "quiz" | "study" | "result">("home");
+  const [questionCount, setQuestionCount] = useState(10);
+  const [quizQuestions, setQuizQuestions] = useState<PokemonQuestion[]>(fallbackQuestions);
+  const [questionIndex, setQuestionIndex] = useState(0);
   const [selected, setSelected] = useState<TypeId | null>(null);
   const [checked, setChecked] = useState(false);
   const [score, setScore] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [usedFallback, setUsedFallback] = useState(false);
 
+  const question = quizQuestions[questionIndex] ?? fallbackQuestions[0];
   const answers = bestTypes(question.types);
   const selectedScore = selected ? multiplier(selected, question.types) : null;
   const isCorrect = !!selected && answers.some((type) => type.id === selected);
 
-  function startQuiz() {
+  async function startQuiz() {
+    setLoading(true);
+    const loaded = await loadQuizQuestions(questionCount);
+
+    setQuizQuestions(loaded.questions);
+    setUsedFallback(!loaded.fromApi);
     setMode("quiz");
-    setQuestionNumber(1);
-    setQuestion(randomQuestion());
+    setQuestionIndex(0);
     setSelected(null);
     setChecked(false);
     setScore(0);
+    setLoading(false);
   }
 
   function chooseType(type: TypeId) {
@@ -115,10 +207,14 @@ export default function Home() {
   function nextQuestion() {
     if (!checked) return;
 
+    if (questionIndex >= quizQuestions.length - 1) {
+      setMode("result");
+      return;
+    }
+
     setSelected(null);
     setChecked(false);
-    setQuestionNumber((prev) => (prev % questions.length) + 1);
-    setQuestion((prev) => randomQuestion(prev.name));
+    setQuestionIndex((prev) => prev + 1);
   }
 
   return (
@@ -131,8 +227,8 @@ export default function Home() {
             <small>효과는 굉장했다</small>
           </span>
         </button>
-        <div className="menu">
-          <button className="menu-button" onClick={startQuiz}>퀴즈</button>
+          <div className="menu">
+          <button className="menu-button" onClick={startQuiz} disabled={loading}>퀴즈</button>
           <button className="menu-button" onClick={() => setMode("study")}>공부</button>
         </div>
       </header>
@@ -145,11 +241,26 @@ export default function Home() {
               <h1>포켓몬상성박사</h1>
               <p className="lead">상대 타입을 보고 가장 아픈 공격 타입을 바로 고르는 연습.</p>
             </div>
-            <img src={questions[0].img} alt="리자몽 스프라이트" />
+            <img src={fallbackQuestions[0].img} alt="리자몽 스프라이트" />
+          </div>
+
+          <div className="count-picker" aria-label="문제 수 선택">
+            <span>문제 수</span>
+            {questionCountOptions.map((count) => (
+              <button
+                className={questionCount === count ? "count-button active" : "count-button"}
+                key={count}
+                onClick={() => setQuestionCount(count)}
+              >
+                {count}
+              </button>
+            ))}
           </div>
 
           <div className="controls">
-            <button className="main-action" onClick={startQuiz}>퀴즈 시작</button>
+            <button className="main-action" onClick={startQuiz} disabled={loading}>
+              {loading ? "불러오는 중" : "퀴즈 시작"}
+            </button>
             <button className="sub-action" onClick={() => setMode("study")}>상성 공부</button>
           </div>
         </section>
@@ -160,7 +271,7 @@ export default function Home() {
           <div className="quiz-screen">
             <div className="lcd monster-panel">
               <div className="quiz-meta">
-                <span>문제 {questionNumber} / {questions.length}</span>
+                <span>문제 {questionIndex + 1} / {quizQuestions.length}</span>
                 <span>점수 {score}</span>
               </div>
               <img src={question.img} alt={`${question.name} 스프라이트`} />
@@ -204,10 +315,30 @@ export default function Home() {
                 <small>
                   {question.types.map((id) => `${typeName(id)} ${(chart[selected][id] ?? 1)}배`).join(" × ")} = {selectedScore}배
                 </small>
-                <em>눌러서 다음 문제</em>
+                <em>{questionIndex >= quizQuestions.length - 1 ? "눌러서 결과 보기" : "눌러서 다음 문제"}</em>
               </button>
             </div>
           )}
+        </section>
+      )}
+
+      {mode === "result" && (
+        <section className="gameboy result">
+          <div className="lcd result-lcd">
+            <p className="tiny-label">퀴즈 완료</p>
+            <h1>{score} / {quizQuestions.length}</h1>
+            <p className="lead">
+              {usedFallback
+                ? "PokeAPI 연결이 안 돼서 기본 샘플로 진행했습니다."
+                : "이번 세트는 중복 없이 랜덤으로 출제했습니다."}
+            </p>
+          </div>
+          <div className="controls">
+            <button className="main-action" onClick={startQuiz} disabled={loading}>
+              {loading ? "불러오는 중" : "다시 풀기"}
+            </button>
+            <button className="sub-action" onClick={() => setMode("home")}>처음으로</button>
+          </div>
         </section>
       )}
 
