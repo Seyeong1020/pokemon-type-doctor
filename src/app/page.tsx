@@ -84,6 +84,27 @@ function bestTypes(defenders: TypeId[]) {
   return scored.filter((type) => type.score === best);
 }
 
+function attackGroups(attack: TypeId) {
+  return types.reduce(
+    (groups, defender) => {
+      const score = multiplier(attack, [defender.id]);
+
+      if (score === 2) groups.strong.push(defender);
+      else if (score === 0.5) groups.weak.push(defender);
+      else if (score === 0) groups.none.push(defender);
+      else groups.normal.push(defender);
+
+      return groups;
+    },
+    {
+      strong: [] as typeof types,
+      weak: [] as typeof types,
+      none: [] as typeof types,
+      normal: [] as typeof types,
+    },
+  );
+}
+
 function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
@@ -173,11 +194,13 @@ export default function Home() {
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(false);
   const [usedFallback, setUsedFallback] = useState(false);
+  const [studyAttack, setStudyAttack] = useState<TypeId>("fire");
 
   const question = quizQuestions[questionIndex] ?? fallbackQuestions[0];
   const answers = bestTypes(question.types);
   const selectedScore = selected ? multiplier(selected, question.types) : null;
   const isCorrect = !!selected && answers.some((type) => type.id === selected);
+  const studyGroups = attackGroups(studyAttack);
 
   async function startQuiz() {
     setLoading(true);
@@ -227,7 +250,7 @@ export default function Home() {
             <small>효과는 굉장했다</small>
           </span>
         </button>
-          <div className="menu">
+        <div className="menu">
           <button className="menu-button" onClick={startQuiz} disabled={loading}>퀴즈</button>
           <button className="menu-button" onClick={() => setMode("study")}>공부</button>
         </div>
@@ -347,24 +370,60 @@ export default function Home() {
           <div className="lcd study-head">
             <div>
               <p className="tiny-label">상성 공부</p>
-              <h1>방어 타입별 약점</h1>
-              <p className="lead">왼쪽 타입을 상대할 때 강한 공격 타입만 빠르게 봅니다.</p>
+              <h1>{typeName(studyAttack)} 공격</h1>
+              <p className="lead">공격 타입을 하나 고르면 어디에 강하고 약한지 바로 봅니다.</p>
             </div>
           </div>
 
-          <div className="study-list">
-            {types.map((defender) => {
-              const strong = bestTypes([defender.id]);
-              return (
-                <div className="study-card" key={defender.id}>
-                  <span className="pill" style={{ background: defender.color }}>{defender.name}</span>
-                  <strong>{strong.map((type) => type.name).join(", ")}</strong>
-                </div>
-              );
-            })}
+          <div className="study-type-grid">
+            {types.map((type) => (
+              <button
+                className={studyAttack === type.id ? "type-btn selected" : "type-btn"}
+                key={type.id}
+                onClick={() => setStudyAttack(type.id)}
+                style={{ background: type.color }}
+              >
+                {type.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="study-board">
+            <EffectGroup title="효과 굉장함" score="2배" items={studyGroups.strong} />
+            <EffectGroup title="효과 별로" score="0.5배" items={studyGroups.weak} />
+            <EffectGroup title="효과 없음" score="0배" items={studyGroups.none} />
+            <EffectGroup title="보통" score="1배" items={studyGroups.normal} />
           </div>
         </section>
       )}
     </main>
+  );
+}
+
+function EffectGroup({
+  title,
+  score,
+  items,
+}: {
+  title: string;
+  score: string;
+  items: { id: TypeId; name: string; color: string }[];
+}) {
+  return (
+    <section className="effect-card">
+      <div className="effect-title">
+        <strong>{title}</strong>
+        <span>{score}</span>
+      </div>
+      <div className="effect-types">
+        {items.length > 0
+          ? items.map((type) => (
+              <span className="mini-pill" style={{ background: type.color }} key={type.id}>
+                {type.name}
+              </span>
+            ))
+          : <small>없음</small>}
+      </div>
+    </section>
   );
 }
